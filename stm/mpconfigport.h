@@ -52,3 +52,7 @@ typedef const void *machine_const_ptr_t; // must be of pointer size
 #endif
 #define USE_DEVICE_MODE
 //#define USE_HOST_MODE
+
+#define sys_tick_counter systick_current_millis()
+#define sys_tick_has_passed systick_has_passed
+#define sys_tick_delay_ms systick_sleep

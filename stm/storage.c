@@ -10,9 +10,11 @@
 #include "flash.h"
 #include "storage.h"
 
-#define CACHE_MEM_START_ADDR (0x10000000) // CCM data RAM, 64k
+extern char _heap_end;
+#define BLOCK_SIZE (512)
+#define CACHE_MEM_START_ADDR (&_heap_end) // cache after heap in CCM
 #define FLASH_PART1_START_BLOCK (0x100)
-#define FLASH_PART1_NUM_BLOCKS (224) // 16k+16k+16k+64k=112k
+#define FLASH_PART1_NUM_BLOCKS (96) // 16k+16k+16k enough mem for 16KB sectors only
 #define FLASH_MEM_START_ADDR (0x08004000) // sector 1, 16k
 
 static bool flash_is_initialised = false;
