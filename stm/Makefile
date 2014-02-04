@@ -61,7 +61,20 @@ SRC_C = \
 SRC_S = \
 	gchelper.s \
 
+SRC_STMUSB = $(addprefix $(STMUSB_DIR)/,\
+	usb_core.c \
+	usb_bsp.c \
+	usb_dcd.c \
+	usb_dcd_int.c \
+	usb_hcd.c \
+	usb_hcd_int.c \
+	)
+
 SRC_STMUSBD = $(addprefix $(STMUSBD_DIR)/,\
+	usbd_core.c \
+	usbd_ioreq.c \
+	usbd_req.c \
+	usbd_usr.c \
 	usbd_desc.c \
 	usbd_pyb_core.c \
 	usbd_pyb_core2.c \
@@ -72,13 +85,14 @@ SRC_STMUSBD = $(addprefix $(STMUSBD_DIR)/,\
 	usbd_storage_msd.c \
 	)
 
+
 SRC_FATFS = $(addprefix $(FATFS_DIR)/,\
 	ff.c \
 	diskio.c \
 	ccsbcs.c \
 	)
 
-OBJ = $(PY_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o) $(SRC_S:.s=.o) $(SRC_STMUSBD:.c=.o) $(SRC_FATFS:.c=.o))
+OBJ = $(PY_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o) $(SRC_S:.s=.o) $(SRC_STMUSB:.c=.o) $(SRC_STMUSBD:.c=.o) $(SRC_FATFS:.c=.o))
 
 all: $(BUILD) $(BUILD)/libmp.a
 
