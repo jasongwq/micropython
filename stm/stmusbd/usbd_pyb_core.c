@@ -82,7 +82,7 @@
 
 #if USB_PYB_USE_MSC
 //#define USB_PYB_CONFIG_DESC_SIZ (67) // for only CDC VCP interfaces
-#define USB_PYB_CONFIG_DESC_SIZ (98) // for both CDC VCP and MSC interfaces
+#define USB_PYB_CONFIG_DESC_SIZ (98+23) // for both CDC VCP and MSC interfaces
 #else // USE_HID
 #define USB_PYB_CONFIG_DESC_SIZ (100) // for both CDC VCP and HID interfaces
 #endif
@@ -145,6 +145,15 @@ uint8_t  USB_Tx_State = 0;
 
 static uint32_t cdcCmd = 0xFF;
 static uint32_t cdcLen = 0;
+
+/* FB stuff */
+#define FB_MAX_IN_PACKET            (64)
+#define FB_MAX_OUT_PACKET           (8)
+#define FB_EPIN_SIZE                FB_MAX_IN_PACKET
+#define FB_EPOUT_SIZE               FB_MAX_OUT_PACKET
+extern void usb_fb_data_in(void *buffer, int *length);
+extern void usb_fb_data_out(void *buffer, int *length);
+__ALIGN_BEGIN static uint8_t usb_xfer_buffer[MSC_MAX_PACKET] __ALIGN_END;
 
 /* PYB interface class callbacks structure */
 USBD_Class_cb_TypeDef USBD_PYB_cb =
@@ -343,6 +352,34 @@ __ALIGN_BEGIN static uint8_t usbd_pyb_CfgDesc[USB_PYB_CONFIG_DESC_SIZ] __ALIGN_E
     0x0a,                           // bInterval: polling interval, units of 1ms
 
 #endif
+    /*Interface Descriptor */
+    0x09,   /* bLength: Interface Descriptor size */
+    USB_INTERFACE_DESCRIPTOR_TYPE,  /* bDescriptorType: Interface */
+    0x02,   /* bInterfaceNumber: Number of Interface */
+    0x01,   /* bAlternateSetting: Alternate setting */
+    0x02,   /* bNumEndpoints: One endpoints used */
+    0xFF,   /* bInterfaceClass: Vendor Specific */
+    0x00,   /* bInterfaceSubClass */
+    0x00,   /* bInterfaceProtocol */
+    0x00,   /* iInterface: */
+
+    // Endpoint IN descriptor
+    0x07,                           // bLength: Endpoint descriptor length
+    USB_ENDPOINT_DESCRIPTOR_TYPE,   // bDescriptorType: Endpoint descriptor type
+    MSC_IN_EP,                      // bEndpointAddress: IN, address 3
+    0x02,                           // bmAttributes: Bulk endpoint type
+    LOBYTE(FB_MAX_IN_PACKET),       // wMaxPacketSize
+    HIBYTE(FB_MAX_IN_PACKET),
+    0x00,                           // bInterval: ignore for Bulk transfer
+
+    // Endpoint OUT descriptor
+    0x07,                           // bLength: Endpoint descriptor length
+    USB_ENDPOINT_DESCRIPTOR_TYPE,   // bDescriptorType: Endpoint descriptor type
+    MSC_OUT_EP,                     // bEndpointAddress: OUT, address 3
+    0x02,                           // bmAttributes: Bulk endpoint type
+    LOBYTE(FB_MAX_OUT_PACKET),      // wMaxPacketSize
+    HIBYTE(FB_MAX_OUT_PACKET),
+    0x00,                           // bInterval: ignore for Bulk transfer
 };
 
 #if !USB_PYB_USE_MSC
@@ -608,6 +645,28 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
 #else
                             USBD_HID_AltSet = req->wValue;
 #endif
+                            MSC_BOT_DeInit(pdev);
+
+                            DCD_EP_Flush(pdev, MSC_IN_EP);
+
+                            /* flush endpoints */
+                            DCD_EP_Flush(pdev, MSC_IN_EP);
+                            DCD_EP_Flush(pdev, MSC_OUT_EP);
+
+                            /* close endpoints */
+                            DCD_EP_Close(pdev, MSC_IN_EP);
+                            DCD_EP_Close(pdev, MSC_OUT_EP);
+
+                            // Open EP IN
+                            DCD_EP_Open(pdev, MSC_IN_EP, MSC_EPIN_SIZE, USB_OTG_EP_BULK);
+
+                            // Open EP OUT
+                            DCD_EP_Open(pdev, MSC_OUT_EP, MSC_EPOUT_SIZE, USB_OTG_EP_BULK);
+
+                            /* Prepare Out endpoint to receive first packet */
+                            DCD_EP_PrepareRx(pdev, MSC_OUT_EP, 
+                                (uint8_t*)(usb_xfer_buffer), FB_MAX_OUT_PACKET);
+
                         }
                         return USBD_OK;
                     }
@@ -718,9 +777,25 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
 #endif
             }
             break;
+
+        // OpenMV Vendor Request ------------------------------
+        case (USB_REQ_TYPE_VENDOR | USB_REQ_RECIPIENT_INTERFACE):
+            switch (req->bRequest) {
+                    default: {
+                        int usb_xfer_length=0;
+                        /* call user callback */
+                        usb_fb_data_out(usb_xfer_buffer, &usb_xfer_length);
+                        if (usb_xfer_length) {
+                            /* Fill IN endpoint fifo with first packet */
+                            DCD_EP_Tx (pdev, MSC_IN_EP, usb_xfer_buffer, usb_xfer_length);
+                        }
+                        break;
+                    }
+            }
+            return USBD_OK;
     }
 
-    printf("SU %x %x %x %x\n", req->bmRequest, req->bRequest, req->wValue, req->wIndex);
+    //printf("SU %x %x %x %x\n", req->bmRequest, req->bRequest, req->wValue, req->wIndex);
 
     // invalid command
     USBD_CtlError(pdev, req);
@@ -788,7 +863,22 @@ static uint8_t usbd_pyb_DataIn(void *pdev, uint8_t epnum) {
 
 #if USB_PYB_USE_MSC
         case (MSC_IN_EP & 0x7f): // TODO?
-            MSC_BOT_DataIn(pdev, epnum);
+            switch (USBD_MSC_AltSet){
+                case 0:                
+                    MSC_BOT_DataIn(pdev, epnum);
+                    break;
+                case 1: {
+                    int usb_xfer_length;
+                    usb_xfer_length = ((USB_OTG_CORE_HANDLE*)pdev)->dev.in_ep[epnum].xfer_count;
+                    usb_fb_data_in(usb_xfer_buffer, &usb_xfer_length);
+
+                    if (usb_xfer_length) {
+                        /* Fill IN endpoint fifo with packet */
+                        DCD_EP_Tx (pdev, MSC_IN_EP, usb_xfer_buffer, usb_xfer_length);
+                    }
+                    break;
+                }
+            }
             return USBD_OK;
 
 #else
@@ -800,7 +890,7 @@ static uint8_t usbd_pyb_DataIn(void *pdev, uint8_t epnum) {
 #endif
     }
 
-    printf("DI %x\n", epnum);
+    //printf("DI %x\n", epnum);
 
     return USBD_OK;
 }
@@ -838,7 +928,7 @@ static uint8_t usbd_pyb_DataOut(void *pdev, uint8_t epnum) {
 #endif
     }
 
-    printf("DO %x\n", epnum);
+    //printf("DO %x\n", epnum);
 
     return USBD_OK;
 }
