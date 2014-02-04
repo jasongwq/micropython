@@ -23,10 +23,17 @@ static int readline(vstr_t *line, const char *prompt) {
     for (;;) {
         char c;
         for (;;) {
+#ifdef USE_HOST_MODE
+            pyb_usb_host_process();
+            c = pyb_usb_host_get_keyboard();
+            if (c != 0) {
+                break;
+            }
+#endif
             if (usb_vcp_rx_any() != 0) {
                 c = usb_vcp_rx_get();
                 break;
-            } 
+            }
             sys_tick_delay_ms(1);
             if (storage_needs_flush()) {
                 storage_flush();
@@ -133,13 +140,19 @@ void libmp_do_repl(void) {
             mp_parse_node_free(pn);
             if (module_fun != mp_const_none) {
                 nlr_buf_t nlr;
+                uint32_t start = sys_tick_counter;
                 if (nlr_push(&nlr) == 0) {
+                    usb_vcp_set_interrupt_char(VCP_CHAR_CTRL_C); // allow ctrl-C to interrupt us
                     rt_call_function_0(module_fun);
+                    usb_vcp_set_interrupt_char(VCP_CHAR_NONE); // disable interrupt
                     nlr_pop();
                 } else {
                     // uncaught exception
+                    // FIXME it could be that an interrupt happens just before we disable it here
+                    usb_vcp_set_interrupt_char(VCP_CHAR_NONE); // disable interrupt
                     mp_obj_print_exception((mp_obj_t)nlr.ret_val);
                 }
+
             }
         }
     }
@@ -179,11 +192,15 @@ bool libmp_do_file(const char *filename) {
 
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
+        usb_vcp_set_interrupt_char(VCP_CHAR_CTRL_C); // allow ctrl-C to interrupt us
         rt_call_function_0(module_fun);
+        usb_vcp_set_interrupt_char(VCP_CHAR_NONE); // disable interrupt
         nlr_pop();
         return true;
     } else {
         // uncaught exception
+        // FIXME it could be that an interrupt happens just before we disable it here
+        usb_vcp_set_interrupt_char(VCP_CHAR_NONE); // disable interrupt
         mp_obj_print_exception((mp_obj_t)nlr.ret_val);
         return false;
     }
