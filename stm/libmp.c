@@ -2,6 +2,8 @@
 #define READLINE_HIST_SIZE (8)
 extern float sqrtf(float x);
 static const char *readline_hist[READLINE_HIST_SIZE] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+static vstr_t line;
+static int line_feed =0;
 
 char *strdup(const char *str) {
     uint32_t len = strlen(str);
@@ -15,11 +17,22 @@ static void stdout_tx_str(const char *str) {
     usb_vcp_send_str(str);
 }
 
+void libmp_line_feed()
+{
+    line_feed =1;
+}
+
+vstr_t* libmp_get_line()
+{
+    return &line;
+}
+
 static int readline(vstr_t *line, const char *prompt) {
     stdout_tx_str(prompt);
     int len = vstr_len(line);
     int escape = 0;
     int hist_num = 0;
+    line_feed = 0;
     for (;;) {
         char c;
         for (;;) {
@@ -37,6 +50,10 @@ static int readline(vstr_t *line, const char *prompt) {
             sys_tick_delay_ms(1);
             if (storage_needs_flush()) {
                 storage_flush();
+            }
+
+            if (line_feed) {
+                return 1;
             }
         }
         if (escape == 0) {
@@ -95,12 +112,19 @@ void libmp_do_repl(void) {
     stdout_tx_str("Micro Python build <git hash> on 25/1/2014; " MICROPY_HW_BOARD_NAME " with STM32F405RG\r\n");
     stdout_tx_str("Type \"help()\" for more information.\r\n");
 
-    vstr_t line;
     vstr_init(&line, 32);
 
     for (;;) {
         vstr_reset(&line);
-        int ret = readline(&line, ">>> ");
+
+        int ret;
+
+        if (line_feed) {
+            ret = readline(&line, "");
+        } else {
+            ret = readline(&line, ">>> ");
+        }
+
         if (ret == 0) {
             // EOF
             break;
@@ -110,7 +134,7 @@ void libmp_do_repl(void) {
             continue;
         }
 
-        if (mp_repl_is_compound_stmt(vstr_str(&line))) {
+        if (line_feed == 0 && mp_repl_is_compound_stmt(vstr_str(&line))) {
             for (;;) {
                 vstr_add_char(&line, '\n');
                 int len = vstr_len(&line);
@@ -122,10 +146,15 @@ void libmp_do_repl(void) {
             }
         }
 
-        mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, vstr_str(&line), vstr_len(&line), 0);
         qstr parse_exc_id;
         const char *parse_exc_msg;
-        mp_parse_node_t pn = mp_parse(lex, MP_PARSE_SINGLE_INPUT, &parse_exc_id, &parse_exc_msg);
+        mp_parse_node_t pn ;
+        mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, vstr_str(&line), vstr_len(&line), 0);
+        if (line_feed==0) {
+            pn = mp_parse(lex, MP_PARSE_SINGLE_INPUT, &parse_exc_id, &parse_exc_msg);
+        } else {
+            pn = mp_parse(lex, MP_PARSE_FILE_INPUT, &parse_exc_id, &parse_exc_msg);
+        }
         qstr source_name = mp_lexer_source_name(lex);
 
         if (pn == MP_PARSE_NODE_NULL) {
@@ -140,7 +169,6 @@ void libmp_do_repl(void) {
             mp_parse_node_free(pn);
             if (module_fun != mp_const_none) {
                 nlr_buf_t nlr;
-                uint32_t start = sys_tick_counter;
                 if (nlr_push(&nlr) == 0) {
                     usb_vcp_set_interrupt_char(VCP_CHAR_CTRL_C); // allow ctrl-C to interrupt us
                     rt_call_function_0(module_fun);
