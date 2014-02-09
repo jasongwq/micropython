@@ -148,11 +148,12 @@ static uint32_t cdcLen = 0;
 
 /* FB stuff */
 #define FB_MAX_IN_PACKET            (64)
-#define FB_MAX_OUT_PACKET           (8)
+#define FB_MAX_OUT_PACKET           (64)
 #define FB_EPIN_SIZE                FB_MAX_IN_PACKET
 #define FB_EPOUT_SIZE               FB_MAX_OUT_PACKET
 extern void usb_fb_data_in(void *buffer, int *length);
-extern void usb_fb_data_out(void *buffer, int *length);
+extern void usb_fb_data_out(void *buffer, int length);
+extern void usb_fb_control(uint8_t request, int length);
 __ALIGN_BEGIN static uint8_t usb_xfer_buffer[MSC_MAX_PACKET] __ALIGN_END;
 
 /* PYB interface class callbacks structure */
@@ -662,11 +663,6 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
 
                             // Open EP OUT
                             DCD_EP_Open(pdev, MSC_OUT_EP, MSC_EPOUT_SIZE, USB_OTG_EP_BULK);
-
-                            /* Prepare Out endpoint to receive first packet */
-                            DCD_EP_PrepareRx(pdev, MSC_OUT_EP, 
-                                (uint8_t*)(usb_xfer_buffer), FB_MAX_OUT_PACKET);
-
                         }
                         return USBD_OK;
                     }
@@ -780,18 +776,21 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
 
         // OpenMV Vendor Request ------------------------------
         case (USB_REQ_TYPE_VENDOR | USB_REQ_RECIPIENT_INTERFACE):
-            switch (req->bRequest) {
-                    default: {
-                        int usb_xfer_length=0;
-                        /* call user callback */
-                        usb_fb_data_out(usb_xfer_buffer, &usb_xfer_length);
-                        if (usb_xfer_length) {
-                            /* Fill IN endpoint fifo with first packet */
-                            DCD_EP_Tx (pdev, MSC_IN_EP, usb_xfer_buffer, usb_xfer_length);
-                        }
-                        break;
-                    }
+            usb_fb_control(req->bRequest, req->wLength);
+            if (req->bmRequest & 0x80) { /* Device to host */
+                int usb_xfer_length=0;
+                /* call user callback */
+                usb_fb_data_in(usb_xfer_buffer, &usb_xfer_length);
+                if (usb_xfer_length) {
+                    /* Fill IN endpoint fifo with first packet */
+                    DCD_EP_Tx (pdev, MSC_IN_EP, usb_xfer_buffer, usb_xfer_length);
+                }
+            } else { /* Host to device */
+                cdcLen = req->wLength;
+                // Prepare the reception of the buffer over EP0
+                return USBD_CtlPrepareRx(pdev, CmdBuff, req->wLength);
             }
+
             return USBD_OK;
     }
 
@@ -815,6 +814,8 @@ static uint8_t usbd_pyb_EP0_RxReady(void *pdev) {
 
         // Reset the command variable to default value
         cdcCmd = NO_CMD;
+    } else {
+        usb_fb_data_out(CmdBuff, cdcLen);
     }
 
     return USBD_OK;
@@ -864,7 +865,7 @@ static uint8_t usbd_pyb_DataIn(void *pdev, uint8_t epnum) {
 #if USB_PYB_USE_MSC
         case (MSC_IN_EP & 0x7f): // TODO?
             switch (USBD_MSC_AltSet){
-                case 0:                
+                case 0: 
                     MSC_BOT_DataIn(pdev, epnum);
                     break;
                 case 1: {
@@ -922,8 +923,21 @@ static uint8_t usbd_pyb_DataOut(void *pdev, uint8_t epnum) {
             return USBD_OK;
 
 #if USB_PYB_USE_MSC
-        case (MSC_OUT_EP & 0x7f): // TODO is this correct?
-            MSC_BOT_DataOut(pdev, epnum);
+        case (MSC_OUT_EP & 0x7f): // TODO?
+            switch (USBD_MSC_AltSet) {
+                case 0:
+                    MSC_BOT_DataOut(pdev, epnum);
+                    break;
+                case 1: {
+                    int usb_xfer_length;
+                    usb_xfer_length = ((USB_OTG_CORE_HANDLE*)pdev)->dev.in_ep[epnum].xfer_count;
+                    usb_fb_data_out(USB_Rx_Buffer, usb_xfer_length);
+                    /* Prepare Out endpoint to receive next packet */
+                    DCD_EP_PrepareRx(pdev, MSC_OUT_EP, 
+                        (uint8_t*)(USB_Rx_Buffer), FB_MAX_OUT_PACKET);
+                    break;
+                }
+            }
             return USBD_OK;
 #endif
     }
