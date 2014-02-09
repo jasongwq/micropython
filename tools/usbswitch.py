@@ -41,7 +41,10 @@ usb.util.claim_interface(dev, interface)
 dev.set_interface_altsetting(interface, altsetting)
 
 # release interface
-usb.util.release_interface(dev, interface)
+#usb.util.release_interface(dev, interface)
+
+#dev.reset()
 
 # reattach kernel driver
-dev.attach_kernel_driver(interface)
+#dev.attach_kernel_driver(interface)
+
