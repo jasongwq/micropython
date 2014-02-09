@@ -117,7 +117,7 @@ void USB_OTG_BSP_Init(USB_OTG_CORE_HANDLE *pdev) {
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
     GPIO_Init(GPIOA, &GPIO_InitStructure);
 
-#if !defined(NETDUINO_PLUS_2)
+#if 0
     // Configure ID pin on PA10
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
