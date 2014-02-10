@@ -776,7 +776,8 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
 
         // OpenMV Vendor Request ------------------------------
         case (USB_REQ_TYPE_VENDOR | USB_REQ_RECIPIENT_INTERFACE):
-            usb_fb_control(req->bRequest, req->wLength);
+            usb_fb_control(req->bRequest, req->wValue);
+
             if (req->bmRequest & 0x80) { /* Device to host */
                 int usb_xfer_length=0;
                 /* call user callback */
@@ -786,9 +787,9 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
                     DCD_EP_Tx (pdev, MSC_IN_EP, usb_xfer_buffer, usb_xfer_length);
                 }
             } else { /* Host to device */
-                cdcLen = req->wLength;
-                // Prepare the reception of the buffer over EP0
-                return USBD_CtlPrepareRx(pdev, CmdBuff, req->wLength);
+                /* Prepare Out endpoint to receive next packet */
+                DCD_EP_PrepareRx(pdev, MSC_OUT_EP,
+                    (uint8_t*)(USB_Rx_Buffer), FB_MAX_OUT_PACKET);
             }
 
             return USBD_OK;
@@ -814,8 +815,6 @@ static uint8_t usbd_pyb_EP0_RxReady(void *pdev) {
 
         // Reset the command variable to default value
         cdcCmd = NO_CMD;
-    } else {
-        usb_fb_data_out(CmdBuff, cdcLen);
     }
 
     return USBD_OK;
@@ -930,7 +929,7 @@ static uint8_t usbd_pyb_DataOut(void *pdev, uint8_t epnum) {
                     break;
                 case 1: {
                     int usb_xfer_length;
-                    usb_xfer_length = ((USB_OTG_CORE_HANDLE*)pdev)->dev.in_ep[epnum].xfer_count;
+                    usb_xfer_length = USBD_GetRxCount(pdev, epnum);
                     usb_fb_data_out(USB_Rx_Buffer, usb_xfer_length);
                     /* Prepare Out endpoint to receive next packet */
                     DCD_EP_PrepareRx(pdev, MSC_OUT_EP, 
