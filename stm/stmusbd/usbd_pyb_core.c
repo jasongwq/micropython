@@ -72,15 +72,10 @@
 #include "usbd_conf.h"
 #include "usbd_msc_bot.h"
 #include "usbd_msc_mem.h"
+#include "usb_core.h"
 
-#define USB_PYB_USE_MSC (1)
 
-#if USB_PYB_USE_MSC
-//#define USB_PYB_CONFIG_DESC_SIZ (67) // for only CDC VCP interfaces
-#define USB_PYB_CONFIG_DESC_SIZ (98) // for both CDC VCP and MSC interfaces
-#else // USE_HID
-#define USB_PYB_CONFIG_DESC_SIZ (100) // for both CDC VCP and HID interfaces
-#endif
+#define USB_PYB_CONFIG_DESC_SIZ (123) // CDC VCP and MSC/HID interfaces
 
 #define MSC_EPIN_SIZE                MSC_MAX_PACKET
 #define MSC_EPOUT_SIZE               MSC_MAX_PACKET
@@ -92,6 +87,7 @@
 
 // HID parameters
 #define HID_IN_EP                   (0x83)
+#define HID_OUT_EP                  (0x03)
 #define HID_IN_PACKET               (4) /* maximum, and actual, packet size */
 
 /*********************************************
@@ -123,14 +119,10 @@ __ALIGN_BEGIN uint8_t APP_Rx_Buffer[APP_RX_DATA_SIZE] __ALIGN_END;
 
 __ALIGN_BEGIN static uint8_t CmdBuff[CDC_CMD_PACKET_SZE] __ALIGN_END;
 
-#if USB_PYB_USE_MSC
 __ALIGN_BEGIN static uint8_t USBD_MSC_MaxLun __ALIGN_END = 0;
 __ALIGN_BEGIN static uint8_t USBD_MSC_AltSet __ALIGN_END = 0;
-#else
-__ALIGN_BEGIN static uint8_t USBD_HID_AltSet __ALIGN_END = 0;
 __ALIGN_BEGIN static uint8_t USBD_HID_Protocol __ALIGN_END = 0;
 __ALIGN_BEGIN static uint8_t USBD_HID_IdleState __ALIGN_END = 0;
-#endif
 
 uint32_t APP_Rx_ptr_in  = 0;
 uint32_t APP_Rx_ptr_out = 0;
@@ -140,6 +132,10 @@ uint8_t  USB_Tx_State = 0;
 
 static uint32_t cdcCmd = 0xFF;
 static uint32_t cdcLen = 0;
+
+
+#define MSC_ALTSET_OFFSET 78
+#define HID_ALTSET_OFFSET 101
 
 /* PYB interface class callbacks structure */
 USBD_Class_cb_TypeDef USBD_PYB_cb =
@@ -267,7 +263,6 @@ __ALIGN_BEGIN static uint8_t usbd_pyb_CfgDesc[USB_PYB_CONFIG_DESC_SIZ] __ALIGN_E
     HIBYTE(CDC_DATA_MAX_PACKET_SIZE),
     0x00,                               // bInterval: ignore for Bulk transfer
 
-#if USB_PYB_USE_MSC
     //==========================================================================
     // MSC only has 1 interface so doesn't need an IAD
 
@@ -301,7 +296,6 @@ __ALIGN_BEGIN static uint8_t usbd_pyb_CfgDesc[USB_PYB_CONFIG_DESC_SIZ] __ALIGN_E
     HIBYTE(MSC_MAX_PACKET),
     0x00,                           // bInterval: ignore for Bulk transfer
 
-#else
     //==========================================================================
     // HID only has 1 interface so doesn't need an IAD
 
@@ -310,7 +304,7 @@ __ALIGN_BEGIN static uint8_t usbd_pyb_CfgDesc[USB_PYB_CONFIG_DESC_SIZ] __ALIGN_E
     0x09,   // bLength: Interface Descriptor size
     USB_INTERFACE_DESCRIPTOR_TYPE,      // bDescriptorType: interface descriptor
     0x02,   // bInterfaceNumber: Number of Interface
-    0x00,   // bAlternateSetting: Alternate setting
+    0x01,   // bAlternateSetting: Alternate setting
     0x01,   // bNumEndpoints
     0x03,   // bInterfaceClass: HID Class
     0x01,   // bInterfaceSubClass: 0=no boot, 1=BOOT
@@ -336,61 +330,7 @@ __ALIGN_BEGIN static uint8_t usbd_pyb_CfgDesc[USB_PYB_CONFIG_DESC_SIZ] __ALIGN_E
     LOBYTE(HID_IN_PACKET),          // wMaxPacketSize
     HIBYTE(HID_IN_PACKET),
     0x0a,                           // bInterval: polling interval, units of 1ms
-
-#endif
-};
-
-#if 0
-__ALIGN_BEGIN static uint8_t HID_MOUSE_ReportDesc[HID_MOUSE_REPORT_DESC_SIZE] __ALIGN_END =
-{
-  0x05,   0x01,
-  0x09,   0x02,
-  0xA1,   0x01,
-  0x09,   0x01,
-  
-  0xA1,   0x00,
-  0x05,   0x09,
-  0x19,   0x01,
-  0x29,   0x03,
-  
-  0x15,   0x00,
-  0x25,   0x01,
-  0x95,   0x03,
-  0x75,   0x01,
-  
-  0x81,   0x02,
-  0x95,   0x01,
-  0x75,   0x05,
-  0x81,   0x01,
-  
-  0x05,   0x01,
-  0x09,   0x30,
-  0x09,   0x31,
-  0x09,   0x38,
-  
-  0x15,   0x81,
-  0x25,   0x7F,
-  0x75,   0x08,
-  0x95,   0x03,
-  
-  0x81,   0x06,
-  0xC0,   0x09,
-  0x3c,   0x05,
-  0xff,   0x09,
-  
-  0x01,   0x15,
-  0x00,   0x25,
-  0x01,   0x75,
-  0x01,   0x95,
-  
-  0x02,   0xb1,
-  0x22,   0x75,
-  0x06,   0x95,
-  0x01,   0xb1,
-  
-  0x01,   0xc0
-}; 
-#endif
+ };
 
 /** @defgroup usbd_pyb_Private_Functions
   * @{
@@ -444,36 +384,21 @@ static uint8_t usbd_pyb_Init(void *pdev, uint8_t cfgidx) {
                      (uint8_t*)(USB_Rx_Buffer),
                      CDC_DATA_OUT_PACKET_SIZE);
 
-#if USB_PYB_USE_MSC
     //----------------------------------
-    // MSC component
+    // MSC/HID component
+    if (USBD_MSC_AltSet == 1) {/* HID */
+        /* Open MSC/HID EP IN */
+        DCD_EP_Open(pdev, MSC_IN_EP, HID_IN_PACKET, USB_OTG_EP_INT);
+    } else { /* MSC */
+        /* Open MSC/HID EP IN */
+        DCD_EP_Open(pdev, MSC_IN_EP, MSC_EPIN_SIZE, USB_OTG_EP_BULK);
 
-    // Open EP IN
-    DCD_EP_Open(pdev,
-                MSC_IN_EP,
-                MSC_EPIN_SIZE,
-                USB_OTG_EP_BULK);
+        /* Open MSC EP OUT */
+        DCD_EP_Open(pdev, MSC_OUT_EP, MSC_EPOUT_SIZE, USB_OTG_EP_BULK);
 
-    // Open EP OUT
-    DCD_EP_Open(pdev,
-                MSC_OUT_EP,
-                MSC_EPOUT_SIZE,
-                USB_OTG_EP_BULK);
-
-    // Init the BOT layer
-    MSC_BOT_Init(pdev);
-
-#else
-    //----------------------------------
-    // HID component
-
-    // Open EP IN
-    DCD_EP_Open(pdev,
-                HID_IN_EP,
-                HID_IN_PACKET,
-                USB_OTG_EP_INT);
-#endif
-
+        /* Init MSC */
+        MSC_BOT_Init(pdev);
+    }
     return USBD_OK;
 }
 
@@ -495,24 +420,14 @@ static uint8_t usbd_pyb_DeInit(void *pdev, uint8_t cfgidx) {
     // Restore default state of the Interface physical components
     VCP_fops.pIf_DeInit();
 
-#if USB_PYB_USE_MSC
     //----------------------------------
     // MSC component
-
     // Close MSC EPs
     DCD_EP_Close(pdev, MSC_IN_EP);
     DCD_EP_Close(pdev, MSC_OUT_EP);
 
     // Un Init the BOT layer
     MSC_BOT_DeInit(pdev);
-
-#else
-    //----------------------------------
-    // HID component
-
-    // Close HID EP
-    DCD_EP_Close(pdev, HID_IN_EP);
-#endif
 
     return USBD_OK;
 }
@@ -564,25 +479,44 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
                     if ((req->wIndex & 0xff) <= 1) {
                         return USBD_CtlSendData(pdev, &usbd_cdc_AltSet, 1);
                     } else {
-#if USB_PYB_USE_MSC
                         return USBD_CtlSendData(pdev, &USBD_MSC_AltSet, 1);
-#else
-                        return USBD_CtlSendData(pdev, &USBD_HID_AltSet, 1);
-#endif
                     }
 
                 case USB_REQ_SET_INTERFACE:
-                    if ((uint8_t)(req->wValue) < USBD_ITF_MAX_NUM) { // TODO
-                        if ((req->wIndex & 0xff) <= 1) {
-                            usbd_cdc_AltSet = req->wValue;
-                        } else {
-#if USB_PYB_USE_MSC
+                    switch (req->wIndex & 0xff) {
+                        case 0:
+                        case 1:
+                            if (req->wValue <= 1) { 
+                                usbd_cdc_AltSet = req->wValue; 
+                                return USBD_OK;
+                            }
+                            break;
+
+                        case 2: /* MSC/HID */
+                            if (req->wValue ==0) { /* Switch to MSC */
+                                usbd_pyb_CfgDesc[MSC_ALTSET_OFFSET] =0;
+                                usbd_pyb_CfgDesc[HID_ALTSET_OFFSET] =1;
+                            } else if  (req->wValue ==1) { /* Switch to HID */
+                                usbd_pyb_CfgDesc[MSC_ALTSET_OFFSET] =1;
+                                usbd_pyb_CfgDesc[HID_ALTSET_OFFSET] =0;
+                            } else { /* error */
+                                break;
+                            }
+                             
+                            /* set altset value */
                             USBD_MSC_AltSet = req->wValue;
-#else
-                            USBD_HID_AltSet = req->wValue;
-#endif
-                        }
-                        return USBD_OK;
+
+                            /* Signal the USB OTG core to do a soft disconnect.
+                               This will cause a re-enumeration and the device 
+                               will send the new altsettings */
+                            ((USB_OTG_CORE_HANDLE*)pdev)->regs.DREGS->DCTL |= (1 << 1);
+                            USB_OTG_BSP_mDelay(1);
+                            /* clear soft disconnect */
+                            ((USB_OTG_CORE_HANDLE*)pdev)->regs.DREGS->DCTL &= ~(1 << 1);
+                            return USBD_OK;
+
+                        default:
+                            break; /* error */
                     }
             }
             break;
@@ -590,8 +524,7 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
         // Standard Endpoint Request -------------------------------------------
         case (USB_REQ_TYPE_STANDARD | USB_REQ_RECIPIENT_ENDPOINT):
             // req->wIndex is the endpoint number, including direction
-#if USB_PYB_USE_MSC
-            if (req->wIndex == MSC_IN_EP || req->wIndex == MSC_OUT_EP) {
+            if (USBD_MSC_AltSet == 0 && (req->wIndex == MSC_IN_EP || req->wIndex == MSC_OUT_EP)) {
                 // MSC component
                 switch (req->bRequest) {
                     case USB_REQ_CLEAR_FEATURE:
@@ -613,7 +546,6 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
                         return USBD_OK;
                 }
             }
-#endif
             break;
 
         // CDC Class Requests ------------------------------
@@ -651,8 +583,7 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
                     return VCP_fops.pIf_Ctrl(req->bRequest, NULL, req->wValue);
                 }
 
-            } else if (req->wIndex == 2) {
-#if USB_PYB_USE_MSC
+            } else if (req->wIndex == 2 && USBD_MSC_AltSet == 0) {
                 // MSC component
                 switch (req->bRequest) {
                     case BOT_GET_MAX_LUN:
@@ -671,7 +602,7 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
                         }
                         break;
                 }
-#else
+            } else if (req->wIndex == 2 && USBD_MSC_AltSet == 1) {
                 // HID component
                 switch (req->bRequest) {
                     case HID_REQ_SET_PROTOCOL:
@@ -688,7 +619,6 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
                     case HID_REQ_GET_IDLE:
                         return USBD_CtlSendData(pdev, &USBD_HID_IdleState, 1);
                 }
-#endif
             }
             break;
     }
@@ -759,18 +689,17 @@ static uint8_t usbd_pyb_DataIn(void *pdev, uint8_t epnum) {
             }
             return USBD_OK;
 
-#if USB_PYB_USE_MSC
         case (MSC_IN_EP & 0x7f): // TODO?
-            MSC_BOT_DataIn(pdev, epnum);
-            return USBD_OK;
-
-#else
-        case (HID_IN_EP & 0x7f):
-            /* Ensure that the FIFO is empty before a new transfer, this condition could
-            be caused by  a new transfer before the end of the previous transfer */
-            DCD_EP_Flush(pdev, HID_IN_EP);
-            return USBD_OK;
-#endif
+            switch (USBD_MSC_AltSet) {
+                case 0: /* MSC */
+                    MSC_BOT_DataIn(pdev, epnum);
+                    return USBD_OK;
+                case 1: /* HID */    
+                    /* Ensure that the FIFO is empty before a new transfer, this condition could
+                    be caused by  a new transfer before the end of the previous transfer */
+                    DCD_EP_Flush(pdev, HID_IN_EP);
+                    return USBD_OK;
+            }
     }
 
     printf("DI %x\n", epnum);
@@ -804,11 +733,9 @@ static uint8_t usbd_pyb_DataOut(void *pdev, uint8_t epnum) {
                              CDC_DATA_OUT_PACKET_SIZE);
             return USBD_OK;
 
-#if USB_PYB_USE_MSC
         case (MSC_OUT_EP & 0x7f): // TODO is this correct?
             MSC_BOT_DataOut(pdev, epnum);
             return USBD_OK;
-#endif
     }
 
     printf("DO %x\n", epnum);
