@@ -2,7 +2,7 @@
 #define __USBD_CONF__H__
 
 #define USBD_CFG_MAX_NUM            1
-#define USBD_ITF_MAX_NUM            2 // TODO need more than 1?
+#define USBD_ITF_MAX_NUM            1 // TODO need more than 1?
 
 // CDC Endpoints parameters
 #define CDC_IN_EP                   0x81  /* EP1 for data IN */
