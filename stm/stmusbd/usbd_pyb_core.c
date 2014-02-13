@@ -151,9 +151,9 @@ static uint32_t cdcLen = 0;
 #define FB_MAX_OUT_PACKET           (64)
 #define FB_EPIN_SIZE                FB_MAX_IN_PACKET
 #define FB_EPOUT_SIZE               FB_MAX_OUT_PACKET
-extern void usb_fb_data_in(void *buffer, int *length);
-extern void usb_fb_data_out(void *buffer, int length);
-extern void usb_fb_control(uint8_t request, int length);
+extern void usbdbg_data_in(void *buffer, int *length);
+extern void usbdbg_data_out(void *buffer, int length);
+extern void usbdbg_control(uint8_t request, int length);
 __ALIGN_BEGIN static uint8_t usb_xfer_buffer[MSC_MAX_PACKET] __ALIGN_END;
 
 /* PYB interface class callbacks structure */
@@ -776,12 +776,12 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
 
         // OpenMV Vendor Request ------------------------------
         case (USB_REQ_TYPE_VENDOR | USB_REQ_RECIPIENT_INTERFACE):
-            usb_fb_control(req->bRequest, req->wValue);
+            usbdbg_control(req->bRequest, req->wValue);
 
             if (req->bmRequest & 0x80) { /* Device to host */
-                int usb_xfer_length=0;
+                int usb_xfer_length=64;
                 /* call user callback */
-                usb_fb_data_in(usb_xfer_buffer, &usb_xfer_length);
+                usbdbg_data_in(usb_xfer_buffer, &usb_xfer_length);
                 if (usb_xfer_length) {
                     /* Fill IN endpoint fifo with first packet */
                     DCD_EP_Tx (pdev, MSC_IN_EP, usb_xfer_buffer, usb_xfer_length);
@@ -870,7 +870,7 @@ static uint8_t usbd_pyb_DataIn(void *pdev, uint8_t epnum) {
                 case 1: {
                     int usb_xfer_length;
                     usb_xfer_length = ((USB_OTG_CORE_HANDLE*)pdev)->dev.in_ep[epnum].xfer_count;
-                    usb_fb_data_in(usb_xfer_buffer, &usb_xfer_length);
+                    usbdbg_data_in(usb_xfer_buffer, &usb_xfer_length);
 
                     if (usb_xfer_length) {
                         /* Fill IN endpoint fifo with packet */
@@ -930,7 +930,7 @@ static uint8_t usbd_pyb_DataOut(void *pdev, uint8_t epnum) {
                 case 1: {
                     int usb_xfer_length;
                     usb_xfer_length = USBD_GetRxCount(pdev, epnum);
-                    usb_fb_data_out(USB_Rx_Buffer, usb_xfer_length);
+                    usbdbg_data_out(USB_Rx_Buffer, usb_xfer_length);
                     /* Prepare Out endpoint to receive next packet */
                     DCD_EP_PrepareRx(pdev, MSC_OUT_EP, 
                         (uint8_t*)(USB_Rx_Buffer), FB_MAX_OUT_PACKET);

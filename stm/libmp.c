@@ -109,7 +109,7 @@ static int readline(vstr_t *line, const char *prompt) {
 }
 
 void libmp_do_repl(void) {
-    stdout_tx_str("Micro Python build <git hash> on 25/1/2014; " MICROPY_HW_BOARD_NAME " with STM32F405RG\r\n");
+    stdout_tx_str("Micro Python on OpenMV with STM32F407\r\n");
     stdout_tx_str("Type \"help()\" for more information.\r\n");
 
     vstr_init(&line, 32);
