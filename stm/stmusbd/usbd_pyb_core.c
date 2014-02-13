@@ -86,8 +86,7 @@
 
 // HID parameters
 #define HID_IN_EP                   (0x83)
-#define HID_OUT_EP                  (0x03)
-#define HID_IN_PACKET               (4) /* maximum, and actual, packet size */
+#define HID_IN_PACKET               (MSC_MAX_PACKET) /* maximum, and actual, packet size */
 
 /*********************************************
    PYB Device library callbacks
@@ -535,11 +534,12 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
                     switch (req->wIndex & 0xff) {
                         case 0:
                         case 1:
-                            if (req->wValue <= 1) { 
-                                usbd_cdc_AltSet = req->wValue; 
-                                return USBD_OK;
+                            if (req->wValue != 0) { 
+                                /* CDC doesn't have alt settings */
+                                break;
                             }
-                            break;
+                            usbd_cdc_AltSet = req->wValue; 
+                            return USBD_OK;
 
                         case 2: /* MSC/HID */
                             if (req->wValue > 1) { 
@@ -561,13 +561,13 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
                             
                             if (req->wValue == 1) {/* HID */
                                 /* Open MSC/HID EP IN */
-                                DCD_EP_Open(pdev, MSC_IN_EP, HID_IN_PACKET, USB_OTG_EP_INT);
+                                DCD_EP_Open(pdev, MSC_IN_EP, HID_IN_PACKET, HID_IN_PACKET);
                             } else { /* MSC */
                                 /* Open MSC/HID EP IN */
                                 DCD_EP_Open(pdev, MSC_IN_EP, MSC_EPIN_SIZE, USB_OTG_EP_BULK);
 
                                 /* Open MSC EP OUT */
-                                DCD_EP_Open(pdev, MSC_OUT_EP, MSC_EPOUT_SIZE, USB_OTG_EP_BULK);
+                                DCD_EP_Open(pdev, MSC_OUT_EP, MSC_EPOUT_SIZE, USB_OTG_EP_INT);
 
                                 /* Init MSC */
                                 MSC_BOT_Init(pdev);
