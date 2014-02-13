@@ -72,7 +72,6 @@
 #include "usbd_conf.h"
 #include "usbd_msc_bot.h"
 #include "usbd_msc_mem.h"
-#include "usb_core.h"
 
 
 #define USB_PYB_CONFIG_DESC_SIZ (123) // CDC VCP and MSC/HID interfaces
@@ -132,10 +131,6 @@ uint8_t  USB_Tx_State = 0;
 
 static uint32_t cdcCmd = 0xFF;
 static uint32_t cdcLen = 0;
-
-
-#define MSC_ALTSET_OFFSET 78
-#define HID_ALTSET_OFFSET 101
 
 /* PYB interface class callbacks structure */
 USBD_Class_cb_TypeDef USBD_PYB_cb =
@@ -332,6 +327,58 @@ __ALIGN_BEGIN static uint8_t usbd_pyb_CfgDesc[USB_PYB_CONFIG_DESC_SIZ] __ALIGN_E
     0x0a,                           // bInterval: polling interval, units of 1ms
  };
 
+#if 0
+__ALIGN_BEGIN static uint8_t HID_MOUSE_ReportDesc[HID_MOUSE_REPORT_DESC_SIZE] __ALIGN_END =
+{
+  0x05,   0x01,
+  0x09,   0x02,
+  0xA1,   0x01,
+  0x09,   0x01,
+  
+  0xA1,   0x00,
+  0x05,   0x09,
+  0x19,   0x01,
+  0x29,   0x03,
+  
+  0x15,   0x00,
+  0x25,   0x01,
+  0x95,   0x03,
+  0x75,   0x01,
+  
+  0x81,   0x02,
+  0x95,   0x01,
+  0x75,   0x05,
+  0x81,   0x01,
+  
+  0x05,   0x01,
+  0x09,   0x30,
+  0x09,   0x31,
+  0x09,   0x38,
+  
+  0x15,   0x81,
+  0x25,   0x7F,
+  0x75,   0x08,
+  0x95,   0x03,
+  
+  0x81,   0x06,
+  0xC0,   0x09,
+  0x3c,   0x05,
+  0xff,   0x09,
+  
+  0x01,   0x15,
+  0x00,   0x25,
+  0x01,   0x75,
+  0x01,   0x95,
+  
+  0x02,   0xb1,
+  0x22,   0x75,
+  0x06,   0x95,
+  0x01,   0xb1,
+  
+  0x01,   0xc0
+}; 
+#endif
+
 /** @defgroup usbd_pyb_Private_Functions
   * @{
   */ 
@@ -385,20 +432,22 @@ static uint8_t usbd_pyb_Init(void *pdev, uint8_t cfgidx) {
                      CDC_DATA_OUT_PACKET_SIZE);
 
     //----------------------------------
-    // MSC/HID component
-    if (USBD_MSC_AltSet == 1) {/* HID */
-        /* Open MSC/HID EP IN */
-        DCD_EP_Open(pdev, MSC_IN_EP, HID_IN_PACKET, USB_OTG_EP_INT);
-    } else { /* MSC */
-        /* Open MSC/HID EP IN */
-        DCD_EP_Open(pdev, MSC_IN_EP, MSC_EPIN_SIZE, USB_OTG_EP_BULK);
+    // MSC component
 
-        /* Open MSC EP OUT */
-        DCD_EP_Open(pdev, MSC_OUT_EP, MSC_EPOUT_SIZE, USB_OTG_EP_BULK);
+    // Open EP IN
+    DCD_EP_Open(pdev,
+                MSC_IN_EP,
+                MSC_EPIN_SIZE,
+                USB_OTG_EP_BULK);
 
-        /* Init MSC */
-        MSC_BOT_Init(pdev);
-    }
+    // Open EP OUT
+    DCD_EP_Open(pdev,
+                MSC_OUT_EP,
+                MSC_EPOUT_SIZE,
+                USB_OTG_EP_BULK);
+
+    // Init the BOT layer
+    MSC_BOT_Init(pdev);
     return USBD_OK;
 }
 
@@ -493,26 +542,36 @@ static uint8_t usbd_pyb_Setup(void *pdev, USB_SETUP_REQ *req) {
                             break;
 
                         case 2: /* MSC/HID */
-                            if (req->wValue ==0) { /* Switch to MSC */
-                                usbd_pyb_CfgDesc[MSC_ALTSET_OFFSET] =0;
-                                usbd_pyb_CfgDesc[HID_ALTSET_OFFSET] =1;
-                            } else if  (req->wValue ==1) { /* Switch to HID */
-                                usbd_pyb_CfgDesc[MSC_ALTSET_OFFSET] =1;
-                                usbd_pyb_CfgDesc[HID_ALTSET_OFFSET] =0;
-                            } else { /* error */
+                            if (req->wValue > 1) { 
                                 break;
                             }
-                             
-                            /* set altset value */
-                            USBD_MSC_AltSet = req->wValue;
 
-                            /* Signal the USB OTG core to do a soft disconnect.
-                               This will cause a re-enumeration and the device 
-                               will send the new altsettings */
-                            ((USB_OTG_CORE_HANDLE*)pdev)->regs.DREGS->DCTL |= (1 << 1);
-                            USB_OTG_BSP_mDelay(1);
-                            /* clear soft disconnect */
-                            ((USB_OTG_CORE_HANDLE*)pdev)->regs.DREGS->DCTL &= ~(1 << 1);
+                            USBD_MSC_AltSet = req->wValue;
+                    
+                            /* deinit MSC */
+                            MSC_BOT_DeInit(pdev);
+
+                            /* flush endpoints */
+                            DCD_EP_Flush(pdev, MSC_IN_EP);
+                            DCD_EP_Flush(pdev, MSC_OUT_EP);
+
+                            /* close endpoints */
+                            DCD_EP_Close(pdev, MSC_IN_EP);
+                            DCD_EP_Close(pdev, MSC_OUT_EP);
+                            
+                            if (req->wValue == 1) {/* HID */
+                                /* Open MSC/HID EP IN */
+                                DCD_EP_Open(pdev, MSC_IN_EP, HID_IN_PACKET, USB_OTG_EP_INT);
+                            } else { /* MSC */
+                                /* Open MSC/HID EP IN */
+                                DCD_EP_Open(pdev, MSC_IN_EP, MSC_EPIN_SIZE, USB_OTG_EP_BULK);
+
+                                /* Open MSC EP OUT */
+                                DCD_EP_Open(pdev, MSC_OUT_EP, MSC_EPOUT_SIZE, USB_OTG_EP_BULK);
+
+                                /* Init MSC */
+                                MSC_BOT_Init(pdev);
+                            }
                             return USBD_OK;
 
                         default:
