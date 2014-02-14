@@ -49,7 +49,6 @@ SRC_C = \
 	malloc0.c \
 	string0.c \
 	printf.c \
-	usart.c \
 	gccollect.c \
 	lexerfatfs.c \
 	flash.c \
