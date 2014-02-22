@@ -189,7 +189,7 @@ bool parse_compile_execute(mp_lexer_t *lex, mp_parse_input_kind_t input_kind, bo
         // uncaught exception
         // FIXME it could be that an interrupt happens just before we disable it here
         usb_vcp_set_interrupt_char(VCP_CHAR_NONE); // disable interrupt
-//        mp_obj_print_exception((mp_obj_t)nlr.ret_val);
+        mp_obj_print_exception((mp_obj_t)nlr.ret_val);
         ret = false;
     }
 
