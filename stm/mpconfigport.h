@@ -45,10 +45,10 @@ typedef const void *machine_const_ptr_t; // must be of pointer size
 
 #include "mpconfigboard.h"
 
-#define STM32F40_41xxx
-#define USE_STDPERIPH_DRIVER
+//#define STM32F40_41xxx
+//#define USE_STDPERIPH_DRIVER
 #if !defined(HSE_VALUE)
-#define HSE_VALUE (8000000)
+//#define HSE_VALUE (8000000)
 #endif
 #define USE_DEVICE_MODE
 //#define USE_HOST_MODE

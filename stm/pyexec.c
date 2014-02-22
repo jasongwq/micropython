@@ -24,6 +24,23 @@
 
 static bool repl_display_debugging_info = 0;
 
+static vstr_t line;
+static int repl_interrupted =0;
+bool usart_rx_any(pyb_usart_t usart_id){return false;}
+int usart_rx_char(pyb_usart_t usart_id){return 0;}
+void usart_tx_str(pyb_usart_t usart_id, const char *str){}
+
+void libmp_int_repl()
+{
+    repl_interrupted =1;
+}
+
+vstr_t* libmp_get_line()
+{
+    return &line;
+}
+
+
 void stdout_tx_str(const char *str) {
     if (pyb_usart_global_debug != PYB_USART_NONE) {
         usart_tx_str(pyb_usart_global_debug, str);
@@ -35,6 +52,7 @@ void stdout_tx_str(const char *str) {
 }
 
 int stdin_rx_chr(void) {
+    repl_interrupted=0;
     for (;;) {
 #ifdef USE_HOST_MODE
         pyb_usb_host_process();
@@ -51,6 +69,10 @@ int stdin_rx_chr(void) {
         sys_tick_delay_ms(1);
         if (storage_needs_flush()) {
             storage_flush();
+        }
+
+        if (repl_interrupted) {
+            return 0;
         }
     }
 }
@@ -74,6 +96,11 @@ int readline(vstr_t *line, const char *prompt) {
     int hist_num = 0;
     for (;;) {
         int c = stdin_rx_chr();
+
+        if (c==0 && repl_interrupted) {
+            return 0;
+        }
+
         if (escape == 0) {
             if (VCP_CHAR_CTRL_A <= c && c <= VCP_CHAR_CTRL_D && vstr_len(line) == len) {
                 return c;
@@ -162,7 +189,7 @@ bool parse_compile_execute(mp_lexer_t *lex, mp_parse_input_kind_t input_kind, bo
         // uncaught exception
         // FIXME it could be that an interrupt happens just before we disable it here
         usb_vcp_set_interrupt_char(VCP_CHAR_NONE); // disable interrupt
-        mp_obj_print_exception((mp_obj_t)nlr.ret_val);
+//        mp_obj_print_exception((mp_obj_t)nlr.ret_val);
         ret = false;
     }
 
@@ -262,8 +289,6 @@ void pyexec_repl(void) {
         }
     }
     */
-
-    vstr_t line;
     vstr_init(&line, 32);
 
     for (;;) {
@@ -276,14 +301,11 @@ void pyexec_repl(void) {
         } else if (ret == VCP_CHAR_CTRL_C) {
             stdout_tx_str("\r\n");
             continue;
-        } else if (ret == VCP_CHAR_CTRL_D) {
-            // EOF
-            break;
         } else if (vstr_len(&line) == 0) {
             continue;
         }
 
-        while (mp_repl_continue_with_input(vstr_str(&line))) {
+        while (repl_interrupted == 0 && mp_repl_continue_with_input(vstr_str(&line))) {
             vstr_add_char(&line, '\n');
             int ret = readline(&line, "... ");
             if (ret == VCP_CHAR_CTRL_D) {
@@ -293,7 +315,11 @@ void pyexec_repl(void) {
         }
 
         mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, vstr_str(&line), vstr_len(&line), 0);
-        parse_compile_execute(lex, MP_PARSE_SINGLE_INPUT, true);
+        if (repl_interrupted==0) {
+            parse_compile_execute(lex, MP_PARSE_SINGLE_INPUT, true);
+        } else {
+            parse_compile_execute(lex, MP_PARSE_FILE_INPUT, true);
+        }
     }
 
     stdout_tx_str("\r\n");

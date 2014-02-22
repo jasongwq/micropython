@@ -17,26 +17,22 @@ DFU=../tools/dfu.py
 
 CROSS_COMPILE = arm-none-eabi-
 
-CFLAGS_CORTEX_M4 = -Wall -mlittle-endian -mthumb -mthumb-interwork -nostartfiles -mcpu=cortex-m4 \
+CFLAGS_CORTEX_M4 = -Wall -mlittle-endian -mthumb -nostartfiles -mcpu=cortex-m4 -mabi=aapcs-linux\
                    -fsingle-precision-constant -Wdouble-promotion -mfpu=fpv4-sp-d16 -mfloat-abi=hard
-CFLAGS = -I. -I$(PY_SRC) -I$(CMSIS_DIR) -I$(STMPERIPH_DIR) -I$(STMUSB_DIR) -Wall -ansi -std=gnu99 $(CFLAGS_CORTEX_M4) -DSTM32F40_41xxx
+CFLAGS = -I. -I$(PY_SRC) -I$(CMSIS_DIR) -I$(STMPERIPH_DIR) -I$(STMUSB_DIR) -Wall -ansi -std=gnu99 $(CFLAGS_CORTEX_M4) -fshort-enums -DSTM32F40_41xxx
 CFLAGS += -I$(STMUSBD_DIR)
 CFLAGS += -I$(STMUSBH_DIR)
 CFLAGS += -I$(FATFS_DIR)
 #CFLAGS += -I$(CC3K_DIR)
 
-BOARD ?= PYBOARD4
-ifeq ($(wildcard boards/$(BOARD)/.),)
-$(error Invalid BOARD specified)
-endif
+BOARD ?= STM32F4DISC
 CFLAGS += -Iboards/$(BOARD)
 
 #Debugging/Optimization
 ifeq ($(DEBUG), 1)
-CFLAGS += -g -DPENDSV_DEBUG
-COPT = -O0
+CFLAGS += -O 0-g -DPENDSV_DEBUG
 else
-COPT += -Os -DNDEBUG
+COPT += -O2 -DNDEBUG
 endif
 
 LDFLAGS = --nostdlib -T stm32f405.ld -Map=$(@:.elf=.map) --cref
@@ -55,6 +51,9 @@ SRC_C = \
 	storage.c \
 	usb.c \
 	pendsv.c \
+	pyexec.c \
+	import.c \
+	sdcard.c\
 	libmp.c \
 
 SRC_S = \

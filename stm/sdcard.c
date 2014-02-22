@@ -3,9 +3,9 @@
 
 #include <stdio.h>
 //#include "stm32f4xx_sdio.h"
-#include "stm324x7i_eval_sdio_sd.h"
+//#include "stm324x7i_eval_sdio_sd.h"
 #include "misc.h"
-#include "systick.h"
+//#include "systick.h"
 #include "mpconfig.h"
 #include "qstr.h"
 #include "obj.h"
@@ -68,40 +68,46 @@ void sdio_init(void) {
 
 void sdcard_init(void) {
     // init the SD card detect pin
-    SD_LowLevel_Init_Detect();
+    //SD_LowLevel_Init_Detect();
 }
 
 bool sdcard_is_present(void) {
-    return SD_Detect() != 0;
+   //return SD_Detect() != 0;
+    return 0;
 }
 
 bool sdcard_power_on(void) {
-    if (!SD_Detect()) {
+    //if (!SD_Detect()) {
         return false;
-    }
+//    }
 
+#if 0
     SD_Error status = SD_Init();
     if (status != SD_OK) {
         SD_PowerOFF();
         SD_DeInit();
         return false;
     }
-
+#endif
     return true;
 }
 
 void sdcard_power_off(void) {
-    SD_PowerOFF();
-    SD_DeInit();
+    //SD_PowerOFF();
+    //SD_DeInit();
 }
 
 uint64_t sdcard_get_capacity_in_bytes(void) {
+#if 0
     SD_CardInfo SDCardInfo;
     SD_GetCardInfo(&SDCardInfo);
     return SDCardInfo.CardCapacity;
+#endif
+    return 0;
 }
 
 bool sdcard_read_block(uint8_t *dest, uint32_t block_num) {
+#if 0
     // TODO return error if not powered on
 
     SD_Error status;
@@ -127,13 +133,13 @@ bool sdcard_read_block(uint8_t *dest, uint32_t block_num) {
             return false;
         }
     }
-
+#endif
     return true;
 }
 
 bool sdcard_write_block(const uint8_t *src, uint32_t block_num) {
     // TODO return error if not powered on
-
+#if 0
     SD_Error status;
 
     status = SD_WriteBlock((uint8_t*)src, block_num * SDCARD_BLOCK_SIZE, SDCARD_BLOCK_SIZE);
@@ -157,7 +163,7 @@ bool sdcard_write_block(const uint8_t *src, uint32_t block_num) {
             return false;
         }
     }
-
+#endif
     return true;
 }
 
