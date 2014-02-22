@@ -42,46 +42,46 @@ LIBS =
 #LIBS += $(shell $(CC) -print-libgcc-file-name)
 
 SRC_C = \
-	malloc0.c \
-	string0.c \
-	printf.c \
-	gccollect.c \
-	lexerfatfs.c \
-	flash.c \
-	storage.c \
-	usb.c \
-	pendsv.c \
-	pyexec.c \
-	import.c \
-	sdcard.c\
-	libmp.c \
+    malloc0.c \
+    string0.c \
+    printf.c \
+    gccollect.c \
+    lexerfatfs.c \
+    flash.c \
+    storage.c \
+    usb.c \
+    pendsv.c \
+    pyexec.c \
+    import.c \
+    sdcard.c\
+    libmp.c \
 
 SRC_S = \
-	gchelper.s \
+    gchelper.s \
 
 SRC_STMUSB = $(addprefix $(STMUSB_DIR)/,\
-	usb_core.c \
-	usb_bsp.c \
-	usb_dcd.c \
-	usb_dcd_int.c \
-	usb_hcd.c \
-	usb_hcd_int.c \
-	)
+    usb_core.c \
+    usb_bsp.c \
+    usb_dcd.c \
+    usb_dcd_int.c \
+    usb_hcd.c \
+    usb_hcd_int.c \
+    )
 
 SRC_STMUSBD = $(addprefix $(STMUSBD_DIR)/,\
-	usbd_core.c \
-	usbd_ioreq.c \
-	usbd_req.c \
-	usbd_usr.c \
-	usbd_desc.c \
-	usbd_pyb_core.c \
-	usbd_pyb_core2.c \
-	usbd_cdc_vcp.c \
-	usbd_msc_bot.c  \
-	usbd_msc_data.c \
-	usbd_msc_scsi.c \
-	usbd_storage_msd.c \
-	)
+    usbd_core.c \
+    usbd_ioreq.c \
+    usbd_req.c \
+    usbd_usr.c \
+    usbd_desc.c \
+    usbd_pyb_core.c \
+    usbd_pyb_core2.c \
+    usbd_cdc_vcp.c \
+    usbd_msc_bot.c  \
+    usbd_msc_data.c \
+    usbd_msc_scsi.c \
+    usbd_storage_msd.c \
+    )
 
 
 SRC_FATFS = $(addprefix $(FATFS_DIR)/,\
@@ -95,27 +95,28 @@ OBJ = $(PY_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o) $(SRC_S:.s=.o) $(SRC_STMUSB:
 all: $(BUILD) $(BUILD)/libmp.a
 
 $(BUILD)/libmp.a: $(OBJ)
-	$(Q)ar -r $@ $(OBJ)
+    $(Q)ar -r $@ $(OBJ)
 
 $(BUILD)/flash.dfu: $(BUILD)/flash0.bin $(BUILD)/flash1.bin
 	$(ECHO) "Create $@"
 	$(Q)$(PYTHON) $(DFU) -b 0x08000000:$(BUILD)/flash0.bin -b 0x08020000:$(BUILD)/flash1.bin $@
 
 $(BUILD)/flash0.bin: $(BUILD)/flash.elf
-	$(Q)$(OBJCOPY) -O binary -j .isr_vector $^ $@
+    $(Q)$(OBJCOPY) -O binary -j .isr_vector $^ $@
 
 $(BUILD)/flash1.bin: $(BUILD)/flash.elf
-	$(Q)$(OBJCOPY) -O binary -j .text -j .data $^ $@
+    $(Q)$(OBJCOPY) -O binary -j .text -j .data $^ $@
 
 $(BUILD)/flash.elf: $(OBJ)
-	$(ECHO) "LINK $@"
-	$(Q)$(LD) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
-	$(Q)$(SIZE) $@
+    $(ECHO) "LINK $@"
+    $(Q)$(LD) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
+    $(Q)$(SIZE) $@
 
 MAKE_PINS = boards/make-pins.py
 BOARD_PINS = boards/$(BOARD)/pins.csv
 AF_FILE = boards/stm32f4xx-af.csv
 PREFIX_FILE = boards/stm32f4xx-prefix.c
+<<<<<<< HEAD
 GEN_PINS_SRC = $(BUILD)/pins_$(BOARD).c
 GEN_PINS_HDR = $(BUILD)/pins.h
 
@@ -131,8 +132,14 @@ $(OBJ): | $(BUILD)/pins.h
 $(BUILD)/%_$(BOARD).c $(BUILD)/%.h: boards/$(BOARD)/%.csv $(MAKE_PINS) $(AF_FILE) $(PREFIX_FILE)
 	$(ECHO) "Create $@"
 	$(Q)$(PYTHON) $(MAKE_PINS) --board $(BOARD_PINS) --af $(AF_FILE) --prefix $(PREFIX_FILE) --hdr $(GEN_PINS_HDR) > $(GEN_PINS_SRC)
+=======
+
+$(BUILD)/pins_$(BOARD).c: $(MAKE_PINS) $(BOARD_PINS) $(AF_FILE) $(PREFIX_FILE)
+    $(ECHO) "Create $@"
+    $(Q)python $(MAKE_PINS) --board $(BOARD_PINS) --af $(AF_FILE) --prefix $(PREFIX_FILE) > $@
+>>>>>>> Enable LFN
 
 $(BUILD)/pins_$(BOARD).o: $(BUILD)/pins_$(BOARD).c
-	$(call compile_c)
+    $(call compile_c)
 
 include ../py/mkrules.mk
