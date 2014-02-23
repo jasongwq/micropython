@@ -9,12 +9,13 @@
 #ifndef _FFCONF
 #define _FFCONF 80960	/* Revision ID */
 
+#include "mpconfigport.h"
 
 /*---------------------------------------------------------------------------/
 / Functions and Buffer Configurations
 /----------------------------------------------------------------------------*/
 
-#define	_FS_TINY		0	/* 0:Normal or 1:Tiny */
+#define	_FS_TINY		1	/* 0:Normal or 1:Tiny */
 /* When _FS_TINY is set to 1, FatFs uses the sector buffer in the file system
 /  object instead of the sector buffer in the individual file object for file
 /  data transfer. This reduces memory consumption 512 bytes each file object. */
@@ -40,7 +41,7 @@
 /* To enable string functions, set _USE_STRFUNC to 1 or 2. */
 
 
-#define	_USE_MKFS		0	/* 0:Disable or 1:Enable */
+#define	_USE_MKFS		1	/* 0:Disable or 1:Enable */
 /* To enable f_mkfs() function, set _USE_MKFS to 1 and set _FS_READONLY to 0 */
 
 
@@ -60,7 +61,7 @@
 / Locale and Namespace Configurations
 /----------------------------------------------------------------------------*/
 
-#define _CODE_PAGE	932
+#define _CODE_PAGE	(MICROPY_LFN_CODE_PAGE)
 /* The _CODE_PAGE specifies the OEM code page to be used on the target system.
 /  Incorrect setting of the code page can cause a file open failure.
 /
@@ -92,8 +93,7 @@
 /   1    - ASCII (Valid for only non-LFN cfg.)
 */
 
-
-#define	_USE_LFN	0		/* 0 to 3 */
+#define	_USE_LFN	(MICROPY_ENABLE_LFN)		/* 0 to 3 */
 #define	_MAX_LFN	255		/* Maximum LFN length to handle (12 to 255) */
 /* The _USE_LFN option switches the LFN feature.
 /
@@ -136,11 +136,11 @@
 / Drive/Volume Configurations
 /----------------------------------------------------------------------------*/
 
-#define _VOLUMES	1
+#define _VOLUMES	2
 /* Number of volumes (logical drives) to be used. */
 
 
-#define	_MULTI_PARTITION	0	/* 0:Single partition, 1:Enable multiple partition */
+#define	_MULTI_PARTITION	1	/* 0:Single partition, 1:Enable multiple partition */
 /* When set to 0, each volume is bound to the same physical drive number and
 / it can mount only first primaly partition. When it is set to 1, each volume
 / is tied to the partitions listed in VolToPart[]. */
