@@ -30,9 +30,9 @@ CFLAGS += -Iboards/$(BOARD)
 
 #Debugging/Optimization
 ifeq ($(DEBUG), 1)
-CFLAGS += -O 0-g -DPENDSV_DEBUG
+CFLAGS += -O0 -g -DPENDSV_DEBUG
 else
-COPT += -O2 -DNDEBUG
+CFLAGS += -O2 -DNDEBUG
 endif
 
 LDFLAGS = --nostdlib -T stm32f405.ld -Map=$(@:.elf=.map) --cref
