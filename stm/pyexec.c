@@ -25,6 +25,7 @@
 static bool repl_display_debugging_info = 0;
 
 static vstr_t line;
+static int code_running = 0;
 static int repl_interrupted =0;
 bool usart_rx_any(pyb_usart_t usart_id){return false;}
 int usart_rx_char(pyb_usart_t usart_id){return 0;}
@@ -40,6 +41,10 @@ vstr_t* libmp_get_line()
     return &line;
 }
 
+bool libmp_code_running()
+{
+    return code_running;
+}
 
 void stdout_tx_str(const char *str) {
     if (pyb_usart_global_debug != PYB_USART_NONE) {
@@ -180,14 +185,17 @@ bool parse_compile_execute(mp_lexer_t *lex, mp_parse_input_kind_t input_kind, bo
     bool ret;
     uint32_t start = sys_tick_counter;
     if (nlr_push(&nlr) == 0) {
+        code_running = 1;
         usb_vcp_set_interrupt_char(VCP_CHAR_CTRL_C); // allow ctrl-C to interrupt us
-        mp_call_function_0(module_fun);
+        rt_call_function_0(module_fun);
+        code_running = 0;
         usb_vcp_set_interrupt_char(VCP_CHAR_NONE); // disable interrupt
         nlr_pop();
         ret = true;
     } else {
         // uncaught exception
         // FIXME it could be that an interrupt happens just before we disable it here
+        code_running = 0;
         usb_vcp_set_interrupt_char(VCP_CHAR_NONE); // disable interrupt
         mp_obj_print_exception((mp_obj_t)nlr.ret_val);
         ret = false;
