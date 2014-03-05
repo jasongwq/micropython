@@ -26,13 +26,15 @@ CFLAGS += -I$(FATFS_DIR)
 #CFLAGS += -I$(CC3K_DIR)
 
 BOARD ?= STM32F4DISC
-CFLAGS += -Iboards/$(BOARD)
+ifeq ($(wildcard boards/$(BOARD)/.),)
+$(error Invalid BOARD specified)
+endif
 
 #Debugging/Optimization
 ifeq ($(DEBUG), 1)
 CFLAGS += -O0 -g -DPENDSV_DEBUG
 else
-CFLAGS += -Os -g -DNDEBUG
+CFLAGS += -O2 -g -DNDEBUG
 endif
 
 LDFLAGS = --nostdlib -T stm32f405.ld -Map=$(@:.elf=.map) --cref

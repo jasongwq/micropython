@@ -281,6 +281,7 @@ soft_reset:
     // load the pyb module
     mp_module_register(MP_QSTR_pyb, (mp_obj_t)&pyb_module);
 
+    while(1);
     // check if user switch held (initiates reset of filesystem)
     bool reset_filesystem = false;
 #if MICROPY_HW_HAS_SWITCH
