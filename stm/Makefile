@@ -29,12 +29,13 @@ BOARD ?= STM32F4DISC
 ifeq ($(wildcard boards/$(BOARD)/.),)
 $(error Invalid BOARD specified)
 endif
+CFLAGS += -Iboards/$(BOARD)
 
 #Debugging/Optimization
 ifeq ($(DEBUG), 1)
 CFLAGS += -O0 -g -DPENDSV_DEBUG
 else
-CFLAGS += -O2 -g -DNDEBUG
+CFLAGS += -Os -g -DNDEBUG
 endif
 
 LDFLAGS = --nostdlib -T stm32f405.ld -Map=$(@:.elf=.map) --cref
