@@ -303,10 +303,7 @@ void pyexec_repl(void) {
         vstr_reset(&line);
         int ret = readline(&line, ">>> ");
 
-        if (ret == VCP_CHAR_CTRL_A) {
-            pyexec_raw_repl();
-            continue;
-        } else if (ret == VCP_CHAR_CTRL_C) {
+        if (ret == VCP_CHAR_CTRL_C) {
             stdout_tx_str("\r\n");
             continue;
         } else if (vstr_len(&line) == 0) {
