@@ -23,16 +23,8 @@ int libmp_init()
     rt_init();
     return 0;
 }
-double __aeabi_f2d(float x) {
-    // TODO
-    return 0.0;
-}
 
-float __aeabi_d2f(double x) {
-    // TODO
-    return 0.0;
-}
-machine_float_t machine_sqrt(machine_float_t x) {
+float machine_sqrt(float x) {
     asm volatile (
             "vsqrt.f32  %[r], %[x]\n"
             : [r] "=t" (x)

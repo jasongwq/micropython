@@ -57,6 +57,7 @@ SRC_C = \
     pyexec.c \
     import.c \
     sdcard.c\
+    math.c\
     libmp.c \
 
 SRC_S = \
