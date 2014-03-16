@@ -21,6 +21,7 @@
 #include "storage.h"
 #include "usb.h"
 #include "usart.h"
+#include "map.h"
 
 static bool repl_display_debugging_info = 0;
 
@@ -323,7 +324,15 @@ void pyexec_repl(void) {
         if (repl_interrupted==0) {
             parse_compile_execute(lex, MP_PARSE_SINGLE_INPUT, true);
         } else {
+            mp_map_t *old_globals = rt_globals_get();
+            mp_map_t *old_locals = rt_locals_get();
+            mp_map_t *scope = mp_map_new(1);
+            rt_globals_set(scope);
+            rt_locals_set(scope);
             parse_compile_execute(lex, MP_PARSE_FILE_INPUT, true);
+            mp_map_free(scope);
+            rt_globals_set(old_globals);
+            rt_locals_set(old_locals);
         }
     }
 
