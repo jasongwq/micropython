@@ -40,6 +40,7 @@ float __attribute__((pcs("aapcs"))) __aeabi_d2f(double x) {
     fx.m = (dx.m>>(52-23)); // right justify
     return fx.f;
 }
+
 double __aeabi_dmul(double x , double y) {
     return 0.0;
 
