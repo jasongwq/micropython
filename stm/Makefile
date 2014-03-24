@@ -35,7 +35,7 @@ CFLAGS += -Iboards/$(BOARD)
 ifeq ($(DEBUG), 1)
 CFLAGS += -O0 -g -DPENDSV_DEBUG
 else
-CFLAGS += -Os -g -DNDEBUG
+CFLAGS += -O2 -g -DNDEBUG
 endif
 
 LDFLAGS = --nostdlib -T stm32f405.ld -Map=$(@:.elf=.map) --cref

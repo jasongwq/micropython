@@ -54,6 +54,17 @@ Q(PULL_UP)
 Q(PULL_DOWN)
 Q(PUSH_PULL)
 Q(OPEN_DRAIN)
+
+//openmv entries
+// Led Module
+Q(led)
+Q(RED)
+Q(GREEN)
+Q(BLUE)
+Q(on)
+Q(off)
+Q(toggle)
+
 Q(Image)
 Q(Imlib)
 Q(Sensor)

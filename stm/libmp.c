@@ -16,18 +16,11 @@ int libmp_init()
 {
     // Micro Python init
     pendsv_init();
-    //sdcard_init();
-    storage_init();
     gc_init(&_heap_start, &_heap_end);
     qstr_init();
     rt_init();
-    return 0;
-}
 
-float machine_sqrt(float x) {
-    asm volatile (
-            "vsqrt.f32  %[r], %[x]\n"
-            : [r] "=t" (x)
-            : [x] "t"  (x));
-    return x;
+    //sdcard_init();
+    storage_init();
+    return 0;
 }
