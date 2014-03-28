@@ -50,6 +50,8 @@ MATH_FUN_1(atan, atan)
 MATH_FUN_2(atan2, atan2)
 MATH_FUN_1_TO_INT(ceil, ceil)
 MATH_FUN_2(copysign, copysign)
+MATH_FUN_1(ceil, ceil)
+//MATH_FUN_2(copysign, copysign)
 MATH_FUN_1(fabs, fabs)
 MATH_FUN_1_TO_INT(floor, floor) //TODO: delegate to x.__floor__() if x is not a float
 MATH_FUN_2(fmod, fmod)
@@ -121,7 +123,7 @@ STATIC const mp_map_elem_t mp_module_math_globals_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_atan), (mp_obj_t)&mp_math_atan_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_atan2), (mp_obj_t)&mp_math_atan2_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_ceil), (mp_obj_t)&mp_math_ceil_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_copysign), (mp_obj_t)&mp_math_copysign_obj },
+//    { MP_OBJ_NEW_QSTR(MP_QSTR_copysign), (mp_obj_t)&mp_math_copysign_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_fabs), (mp_obj_t)&mp_math_fabs_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_floor), (mp_obj_t)&mp_math_floor_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_frexp), (mp_obj_t)&mp_math_frexp_obj },
