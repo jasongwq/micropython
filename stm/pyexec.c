@@ -324,15 +324,30 @@ void pyexec_repl(void) {
         if (repl_interrupted==0) {
             parse_compile_execute(lex, MP_PARSE_SINGLE_INPUT, true);
         } else {
-            mp_map_t *old_globals = rt_globals_get();
             mp_map_t *old_locals = rt_locals_get();
-            mp_map_t *scope = mp_map_new(1);
-            rt_globals_set(scope);
-            rt_locals_set(scope);
+            mp_map_t *old_globals = rt_globals_get();
+
+            /* create new scope */
+            mp_map_t *new_locals = mp_map_new(1);
+            mp_map_t *new_globals= mp_map_new(old_globals->alloc);
+            new_globals->used = old_globals->used;
+            memcpy(new_globals->table, old_globals->table, old_globals->alloc * sizeof(mp_map_elem_t));
+
+            /* set new scope */
+            rt_locals_set(new_locals);
+            rt_globals_set(new_globals);
+
+            /* exec code */
             parse_compile_execute(lex, MP_PARSE_FILE_INPUT, true);
-            mp_map_free(scope);
-            rt_globals_set(old_globals);
+
+            /* restore old scope */
             rt_locals_set(old_locals);
+            rt_globals_set(old_globals);
+
+            /* cleanup */
+            mp_map_free(new_locals);
+            mp_map_free(new_globals);
+
         }
     }
 
