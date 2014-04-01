@@ -28,9 +28,6 @@ Q(Servo)
 Q(SD)
 Q(SDcard)
 Q(I2C)
-Q(gpio)
-Q(gpio_in)
-Q(gpio_out)
 Q(Usart)
 Q(ADC)
 Q(ADC_all)
@@ -55,6 +52,11 @@ Q(PUSH_PULL)
 Q(OPEN_DRAIN)
 
 //openmv entries
+// Image
+Q(Image)
+Q(Surf)
+Q(Cascade)
+
 // Led Module
 Q(led)
 Q(RED)
@@ -88,11 +90,27 @@ Q(reset)
 Q(snapshot)
 Q(set_pixformat)
 Q(set_framerate)
+Q(set_framesize)
 Q(set_gainceiling)
 Q(set_brightness)
 Q(__write_reg)
 Q(__read_reg)
 
-Q(Image)
-Q(Imlib)
-Q(Cascade)
+// GPIO
+Q(P1)
+Q(P2)
+Q(P3)
+Q(P4)
+Q(P5)
+Q(P6)
+Q(IN)
+Q(OUT)
+Q(gpio)
+Q(GPIO)
+
+// SPI
+Q(spi)
+Q(read)
+Q(write)
+Q(write_image)
+
