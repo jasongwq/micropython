@@ -329,7 +329,7 @@ void pyexec_repl(void) {
 
             /* create new scope */
             mp_map_t *new_locals = mp_map_new(1);
-            mp_map_t *new_globals= mp_map_new(old_globals->alloc);
+            mp_map_t *new_globals= mp_map_new(old_globals->alloc-1);
             new_globals->used = old_globals->used;
             memcpy(new_globals->table, old_globals->table, old_globals->alloc * sizeof(mp_map_elem_t));
 
