@@ -21,7 +21,6 @@
 #include "storage.h"
 #include "usb.h"
 #include "usart.h"
-#include "map.h"
 
 static bool repl_display_debugging_info = 0;
 
