@@ -122,8 +122,8 @@ AF_FILE = boards/stm32f4xx-af.csv
 PREFIX_FILE = boards/stm32f4xx-prefix.c
 
 $(BUILD)/pins_$(BOARD).c: $(MAKE_PINS) $(BOARD_PINS) $(AF_FILE) $(PREFIX_FILE)
-    $(ECHO) "Create $@"
-    $(Q)python $(MAKE_PINS) --board $(BOARD_PINS) --af $(AF_FILE) --prefix $(PREFIX_FILE) > $@
+	$(ECHO) "Create $@"
+	$(Q)python $(MAKE_PINS) --board $(BOARD_PINS) --af $(AF_FILE) --prefix $(PREFIX_FILE) > $@
 
 $(BUILD)/pins_$(BOARD).o: $(BUILD)/pins_$(BOARD).c
 	$(call compile_c)
