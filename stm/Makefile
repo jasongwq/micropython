@@ -19,7 +19,7 @@ CROSS_COMPILE = arm-none-eabi-
 
 CFLAGS_CORTEX_M4 = -Wall -mlittle-endian -mthumb -nostartfiles -mcpu=cortex-m4 -mabi=aapcs-linux\
                    -fsingle-precision-constant -Wdouble-promotion -mfpu=fpv4-sp-d16 -mfloat-abi=hard
-CFLAGS = -I. -I$(PY_SRC) -I$(CMSIS_DIR) -I$(STMPERIPH_DIR) -I$(STMUSB_DIR) -Wall -ansi -std=gnu99 $(CFLAGS_CORTEX_M4) -fshort-enums -DSTM32F40_41xxx
+CFLAGS = -I. -I$(PY_SRC) -I$(CMSIS_DIR) -I$(STMPERIPH_DIR) -I$(STMUSB_DIR) -Wall -ansi -std=gnu99 $(CFLAGS_CORTEX_M4) -DSTM32F40_41xxx
 CFLAGS += -I$(STMUSBD_DIR)
 CFLAGS += -I$(STMUSBH_DIR)
 CFLAGS += -I$(FATFS_DIR)
