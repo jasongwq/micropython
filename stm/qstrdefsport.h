@@ -27,6 +27,8 @@ Q(LCD)
 Q(Servo)
 Q(SD)
 Q(SDcard)
+Q(power)
+Q(present)
 Q(I2C)
 Q(Usart)
 Q(ADC)
@@ -53,9 +55,23 @@ Q(OPEN_DRAIN)
 
 //openmv entries
 // Image
+Q(image)
 Q(Image)
 Q(Surf)
 Q(Cascade)
+Q(save)
+Q(blit)
+Q(histeq)
+Q(median)
+Q(threshold)
+Q(draw_circle)
+Q(draw_rectangle)
+Q(draw_keypoints)
+Q(find_blobs)
+Q(find_template)
+Q(find_features)
+Q(find_keypoints)
+Q(find_keypoints_match)
 
 // Led Module
 Q(led)
@@ -72,6 +88,11 @@ Q(ticks)
 Q(clock)
 Q(sleep)
 Q(Clock)
+
+// Clock
+Q(tick)
+Q(fps)
+Q(avg)
 
 //Sensor Module
 Q(sensor)
@@ -107,6 +128,8 @@ Q(IN)
 Q(OUT)
 Q(gpio)
 Q(GPIO)
+Q(low)
+Q(high)
 
 // SPI
 Q(spi)
@@ -114,3 +137,7 @@ Q(read)
 Q(write)
 Q(write_image)
 
+
+// File
+Q(file)
+Q(close)
