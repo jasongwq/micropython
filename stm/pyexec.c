@@ -187,7 +187,7 @@ bool parse_compile_execute(mp_lexer_t *lex, mp_parse_input_kind_t input_kind, bo
     if (nlr_push(&nlr) == 0) {
         code_running = 1;
         usb_vcp_set_interrupt_char(VCP_CHAR_CTRL_C); // allow ctrl-C to interrupt us
-        rt_call_function_0(module_fun);
+        mp_call_function_0(module_fun);
         code_running = 0;
         usb_vcp_set_interrupt_char(VCP_CHAR_NONE); // disable interrupt
         nlr_pop();
@@ -323,29 +323,30 @@ void pyexec_repl(void) {
         if (repl_interrupted==0) {
             parse_compile_execute(lex, MP_PARSE_SINGLE_INPUT, true);
         } else {
-            mp_map_t *old_locals = rt_locals_get();
-            mp_map_t *old_globals = rt_globals_get();
+            mp_obj_dict_t *old_locals = mp_locals_get();
+            mp_obj_dict_t *old_globals = mp_globals_get();
 
             /* create new scope */
-            mp_map_t *new_locals = mp_map_new(1);
-            mp_map_t *new_globals= mp_map_new(old_globals->alloc-1);
-            new_globals->used = old_globals->used;
-            memcpy(new_globals->table, old_globals->table, old_globals->alloc * sizeof(mp_map_elem_t));
+            mp_obj_dict_t new_locals, new_globals;
+            mp_obj_dict_init(&new_locals, 1);
+            mp_obj_dict_init(&new_globals, old_globals->map.alloc-1);
+            new_globals.map.used = old_globals->map.used;
+            memcpy(new_globals.map.table, old_globals->map.table, old_globals->map.alloc * sizeof(mp_map_elem_t));
 
             /* set new scope */
-            rt_locals_set(new_locals);
-            rt_globals_set(new_globals);
+            mp_locals_set(&new_locals);
+            mp_globals_set(&new_globals);
 
             /* exec code */
             parse_compile_execute(lex, MP_PARSE_FILE_INPUT, true);
 
             /* restore old scope */
-            rt_locals_set(old_locals);
-            rt_globals_set(old_globals);
+            mp_locals_set(old_locals);
+            mp_globals_set(old_globals);
 
             /* cleanup */
-            mp_map_free(new_locals);
-            mp_map_free(new_globals);
+            mp_map_free(&new_locals.map);
+            mp_map_free(&new_globals.map);
 
         }
     }

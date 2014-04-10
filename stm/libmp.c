@@ -18,7 +18,7 @@ int libmp_init()
     pendsv_init();
     gc_init(&_heap_start, &_heap_end);
     qstr_init();
-    rt_init();
+    mp_init();
 
     //sdcard_init();
     storage_init();

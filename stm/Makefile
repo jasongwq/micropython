@@ -54,9 +54,9 @@ SRC_C = \
     storage.c \
     usb.c \
     pendsv.c \
+    sdcard.c \
     pyexec.c \
     import.c \
-    sdcard.c\
     math.c\
     libmp.c \
 
