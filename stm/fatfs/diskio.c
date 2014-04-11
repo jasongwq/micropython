@@ -42,10 +42,9 @@ DSTATUS disk_initialize (
             return 0;
 
         case PD_SDCARD:
-            if (!sdcard_power_on()) {
+            if (!sdcard_init()) {
                 return STA_NODISK;
             }
-            // TODO return STA_PROTECT if SD card is read only
             return 0;
     }
 
@@ -94,11 +93,8 @@ DRESULT disk_read (
             return RES_OK;
 
         case PD_SDCARD:
-            // TODO have a multi-block read function
-            for (int i = 0; i < count; i++) {
-                if (!sdcard_read_block(buff + i * SDCARD_BLOCK_SIZE, sector + i)) {
-                    return RES_ERROR;
-                }
+            if (!sdcard_read(buff, sector, count)) {
+                return RES_ERROR;
             }
             return RES_OK;
     }
@@ -128,11 +124,8 @@ DRESULT disk_write (
             return RES_OK;
 
         case PD_SDCARD:
-            // TODO have a multi-block write function
-            for (int i = 0; i < count; i++) {
-                if (!sdcard_write_block(buff + i * SDCARD_BLOCK_SIZE, sector + i)) {
-                    return RES_ERROR;
-                }
+            if (!sdcard_write(buff, sector, count)) {
+                return RES_ERROR;
             }
             return RES_OK;
     }

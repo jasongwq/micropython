@@ -196,7 +196,7 @@ int8_t SDCARD_STORAGE_Init(uint8_t lun) {
     return (-1);
   }
   */
-    if (!sdcard_power_on()) {
+    if (!sdcard_init()) {
         return -1;
     }
 
@@ -224,7 +224,7 @@ int8_t SDCARD_STORAGE_GetCapacity(uint8_t lun, uint32_t *block_num, uint32_t *bl
   */
 
     *block_size = SDCARD_BLOCK_SIZE;
-    *block_num =  sdcard_get_capacity_in_bytes() / SDCARD_BLOCK_SIZE;
+//    *block_num =  sdcard_get_capacity_in_bytes() / SDCARD_BLOCK_SIZE;
 
     return 0;
 }
@@ -279,22 +279,10 @@ int8_t SDCARD_STORAGE_IsWriteProtected(uint8_t lun) {
   * @retval Status
   */
 int8_t SDCARD_STORAGE_Read(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t blk_len) {
-    // TODO replace with call to sdcard_read_multi_blocks
-    for (int i = 0; i < blk_len; i++) {
-        if (!sdcard_read_block(buf + i * SDCARD_BLOCK_SIZE, blk_addr + i)) {
-            return -1;
-        }
-    }
-    /*
-    if (SD_ReadMultiBlocks(buf, blk_addr * 512, 512, blk_len) != 0) {
+    if (!sdcard_read(buf, blk_addr, blk_len)) {
         return -1;
     }
-#ifndef USE_STM3210C_EVAL
-    SD_WaitReadOperation();
-    while (SD_GetStatus() != SD_TRANSFER_OK);
-#endif
-*/
-   return 0;
+    return 0;
 }
 
 /**
@@ -306,21 +294,9 @@ int8_t SDCARD_STORAGE_Read(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_
   * @retval Status
   */
 int8_t SDCARD_STORAGE_Write(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t blk_len) {
-    // TODO replace with call to sdcard_write_multi_blocks
-    for (int i = 0; i < blk_len; i++) {
-        if (!sdcard_write_block(buf + i * SDCARD_BLOCK_SIZE, blk_addr + i)) {
-            return -1;
-        }
+    if (!sdcard_write(buf, blk_addr, blk_len)) {
+        return -1;
     }
-    /*
-  if( SD_WriteMultiBlocks (buf, blk_addr * 512, 512, blk_len) != 0) {
-    return -1;
-  }
-#ifndef USE_STM3210C_EVAL
-  SD_WaitWriteOperation();
-  while (SD_GetStatus() != SD_TRANSFER_OK);
-#endif
-*/
     return 0;
 }
 
