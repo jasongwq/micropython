@@ -97,10 +97,7 @@ typedef bool BOOL;
 #define SPIx_CLK_CMD        RCC_APB1PeriphClockCmd
 #define GPIO_CLK_CMD        RCC_AHB1PeriphClockCmd
 
-/* for SPI2 and full-speed APB1: 36MHz/2 */
-/* !! PRESCALE 4 used here - 2 does not work, maybe because
-   of the poor wiring on the HELI_V1 prototype hardware */
-#define SPI_BaudRatePrescaler_SPIx  SPI_BaudRatePrescaler_256
+#define SPI_BaudRatePrescaler_SPIx  SPI_BaudRatePrescaler_4
 
 /* Definitions for MMC/SDC command */
 #define CMD0    (0x40+0)    /* GO_IDLE_STATE */
