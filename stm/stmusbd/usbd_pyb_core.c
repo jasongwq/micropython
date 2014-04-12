@@ -179,7 +179,7 @@ USBD_Class_cb_TypeDef USBD_PYB_cb =
   #endif
 #endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
 /* USB PYB device Configuration Descriptor */
-__ALIGN_BEGIN static uint8_t usbd_pyb_CfgDesc[USB_PYB_CONFIG_DESC_SIZ] __ALIGN_END =
+__ALIGN_BEGIN static const uint8_t usbd_pyb_CfgDesc[USB_PYB_CONFIG_DESC_SIZ] __ALIGN_END =
 {
     //--------------------------------------------------------------------------
     // Configuration Descriptor
@@ -384,7 +384,7 @@ __ALIGN_BEGIN static uint8_t usbd_pyb_CfgDesc[USB_PYB_CONFIG_DESC_SIZ] __ALIGN_E
 };
 
 #if !USB_PYB_USE_MSC
-__ALIGN_BEGIN static uint8_t HID_MOUSE_ReportDesc[HID_MOUSE_REPORT_DESC_SIZE] __ALIGN_END =
+__ALIGN_BEGIN static const uint8_t HID_MOUSE_ReportDesc[HID_MOUSE_REPORT_DESC_SIZE] __ALIGN_END =
 {
   0x05,   0x01,
   0x09,   0x02,
@@ -1041,7 +1041,7 @@ static void Handle_USBAsynchXfer (void *pdev)
   */
 static uint8_t *usbd_pyb_GetCfgDesc(uint8_t speed, uint16_t *length) {
     *length = sizeof(usbd_pyb_CfgDesc);
-    return usbd_pyb_CfgDesc;
+    return (uint8_t*) usbd_pyb_CfgDesc;
 }
 
 /**
