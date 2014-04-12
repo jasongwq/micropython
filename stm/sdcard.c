@@ -121,7 +121,7 @@ typedef bool BOOL;
 /* Card-Select Controls  (Platform dependent) */
 #define SELECT()        GPIO_ResetBits(GPIO_PORT_CS, GPIO_PIN_CS)    /* MMC CS = L */
 #define DESELECT()      GPIO_SetBits(GPIO_PORT_CS, GPIO_PIN_CS)      /* MMC CS = H */
-#define SD_TIMEOUT      (100000)
+#define SD_TIMEOUT      (1000000)
 
 /*--------------------------------------------------------------------------
 
