@@ -97,7 +97,7 @@ typedef bool BOOL;
 #define SPIx_CLK_CMD        RCC_APB1PeriphClockCmd
 #define GPIO_CLK_CMD        RCC_AHB1PeriphClockCmd
 
-#define SPI_BaudRatePrescaler_SPIx  SPI_BaudRatePrescaler_4
+#define SPI_BaudRatePrescaler_SPIx  SPI_BaudRatePrescaler_2
 
 /* Definitions for MMC/SDC command */
 #define CMD0    (0x40+0)    /* GO_IDLE_STATE */
@@ -270,7 +270,7 @@ static void sdcard_hw_init(void)
     GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
     GPIO_Init(GPIO_PORT_CS, &GPIO_InitStructure);
 
     /* De-select the Card: Chip Select high */
@@ -292,7 +292,7 @@ static void sdcard_hw_init(void)
     GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
 
     /* SPI  MISO pin configuration */
     GPIO_InitStructure.GPIO_Pin =  GPIO_PIN_MISO;
@@ -589,7 +589,10 @@ bool sdcard_write(const uint8_t *buff, uint32_t sector, uint32_t count)
                 && xmit_datablock(buff, 0xFE))
             count = 0;
     } else {            /* Multiple block write */
-        if (CardType & CT_SDC) send_cmd(ACMD23, count);
+        if (CardType & CT_SDC) {
+            send_cmd(ACMD23, count);
+        }
+
         if (send_cmd(CMD25, sector) == 0) {    /* WRITE_MULTIPLE_BLOCK */
             do {
                 if (!xmit_datablock(buff, 0xFC)) break;
