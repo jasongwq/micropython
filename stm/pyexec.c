@@ -329,7 +329,7 @@ void pyexec_repl(void) {
             /* create new scope */
             mp_obj_dict_t new_locals, new_globals;
             mp_obj_dict_init(&new_locals, 1);
-            mp_obj_dict_init(&new_globals, old_globals->map.alloc-1);
+            mp_obj_dict_init(&new_globals, old_globals->map.alloc);
             new_globals.map.used = old_globals->map.used;
             memcpy(new_globals.map.table, old_globals->map.table, old_globals->map.alloc * sizeof(mp_map_elem_t));
 
